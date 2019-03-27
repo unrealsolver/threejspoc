@@ -1,85 +1,39 @@
+// World to screen pos
+// :ptype worldPos: Vector3
+// :ptype cam: Camera
+// :ptype screenSize: Vector2
+const w2s = function(worldPos, cam, screenSize) {
+  const vec = worldPos.clone().project(cam)
+  vec.x = (vec.x + 1) / 2 * screenSize.x
+  vec.y = (vec.y - 1) / 2 * screenSize.y
+  return vec
+}
+
+const RESOLUTION = new THREE.Vector2(window.innerWidth, window.innerHeight)
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x77b5fe);
-// const cam = new THREE.PerspectiveCamera(
-//   75,
-//   window.innerWidth / window.innerHeight,
-//   0.1,
-//   1000
-// );
+const sceneHud = new THREE.Scene()
+scene.background = new THREE.Color(0x77B5FE)
 const cam = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
   1,
   20000
 );
+
+const camHud   = new THREE.OrthographicCamera(
+  RESOLUTION.x / -2,
+  RESOLUTION.x / 2,
+  RESOLUTION.y / 2,
+  RESOLUTION.y / -2,
+  -1000,
+  1000
+)
+
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+renderer.setSize(window.innerWidth, window.innerHeight)
+document.body.appendChild(renderer.domElement)
 
-// -- HEIGHTS --
-const SIZE = 100;
-const heightmap = new Float32Array(SIZE * SIZE);
-for (let ix = 0; ix < heightmap.length; ix++) {
-  heightmap[ix] = Math.random();
-}
-
-// -- TERRAIN --
-// subdivide level
-// const GRID_SIZE = 12
-// const offset = {x: 0, y: 0}
-
-// const terrain = new Float32Array(3 * GRID_SIZE * GRID_SIZE)
-// for (let ix = 0; ix < terrain.length; ix++) {
-//   comp = ix % 3
-//   terrain[ix] =
-//     comp == 0 ? Math.floor(ix / (3 * GRID_SIZE)) : // X comp
-//     comp == 1 ? Math.floor(ix / 3) % GRID_SIZE : // Y comp
-//     // 'Realistic' terrain
-//     Math.random() + Math.sin(3.14 * (Math.floor(ix / (3 * GRID_SIZE)) / GRID_SIZE))
-// }
-
-// 2 triangles per plane, 3 dimensions per triangle
-// terrainVert = new Float32Array(2 * 3 * 3 * GRID_SIZE * GRID_SIZE)
-
-// k = 0
-// for (let i = 0; i < GRID_SIZE - 1; i++) {
-//   for (let j = 0; j < GRID_SIZE - 1; j++) {
-//     let v0offset = 3 * i * GRID_SIZE + j * 3
-//     terrainVert[k]     = terrain[v0offset]
-//     terrainVert[k + 1] = terrain[v0offset + 1]
-//     terrainVert[k + 2] = terrain[v0offset + 2]
-
-//     let v1offset = (3 * (i + 1)) * GRID_SIZE + j * 3
-//     terrainVert[k + 3] = terrain[v1offset]
-//     terrainVert[k + 4] = terrain[v1offset + 1]
-//     terrainVert[k + 5] = terrain[v1offset + 2]
-
-//     let v2offset = 3 * i * GRID_SIZE + ((j + 1) * 3)
-//     terrainVert[k + 6] = terrain[v2offset]
-//     terrainVert[k + 7] = terrain[v2offset + 1]
-//     terrainVert[k + 8] = terrain[v2offset + 2]
-
-//     let v3offset = 3 * (i + 1) * GRID_SIZE + ((j + 1) * 3)
-//     terrainVert[k + 9] = terrain[v3offset]
-//     terrainVert[k + 10] = terrain[v3offset + 1]
-//     terrainVert[k + 11] = terrain[v3offset + 2]
-
-//     terrainVert[k + 12] = terrain[v2offset]
-//     terrainVert[k + 13] = terrain[v2offset + 1]
-//     terrainVert[k + 14] = terrain[v2offset + 2]
-
-//     terrainVert[k + 15] = terrain[v1offset]
-//     terrainVert[k + 16] = terrain[v1offset + 1]
-//     terrainVert[k + 17] = terrain[v1offset + 2]
-
-//     k += 18
-//   }
-// }
-
-// const buf = new THREE.BufferAttribute( terrainVert, 3 )
-// buf.dynamic = true
-// geometry.addAttribute( 'position',  buf)
-// geometry.faceVertexUvs  = [...terrainVert];
 const worldWidth = 256,
   worldDepth = 256,
   worldHalfWidth = worldWidth / 2,
@@ -103,6 +57,40 @@ material.wireframe = true;
 material.wireframeLinewidth = 3;
 
 const mesh = new THREE.Mesh(geometry, material);
+mesh.position.y += 750
+mesh.name = 'Terrain'
+
+// -- WELL TOP CONE --
+const wellTop = new THREE.Mesh(
+  new THREE.ConeBufferGeometry(240, 400, 4),
+  new THREE.MeshBasicMaterial({color: 0xEE8800})
+)
+wellTop.name = 'Well'
+wellTop.position.y = 2000
+scene.add(wellTop)
+
+// -- CAMERA SPACE OBJECTS --
+const TOOLTIP_COLOR = 0xFFFFFF
+const objMat = new THREE.MeshBasicMaterial({color: TOOLTIP_COLOR})
+objMat.depthTest = false
+const obj = new THREE.Mesh(
+  new THREE.CircleGeometry(4, 9),
+  objMat
+)
+
+const TOOLTIP_LEN = 100
+const tooltipLineMat = new THREE.LineBasicMaterial({color: TOOLTIP_COLOR, linewidth: 2})
+const tooltipLineGeom = new THREE.Geometry()
+tooltipLineGeom.vertices.push(new THREE.Vector3(0, 0, 0))
+tooltipLineGeom.vertices.push(new THREE.Vector3(100, 100, 0))
+tooltipLineGeom.vertices.push(new THREE.Vector3(150, 100, 0))
+const tooltipLine = new THREE.Line(tooltipLineGeom, tooltipLineMat)
+
+let textGeom = new THREE.BufferGeometry()
+const textEl = document.getElementById('text')
+
+camHud.position.z = 10
+sceneHud.add(obj)
 
 const curves = [
   new THREE.CatmullRomCurve3([
@@ -124,62 +112,64 @@ const curves = [
   ])
 ];
 
-const curveMat = new THREE.LineBasicMaterial({ color: 0xdd5533, linewidth: 4 });
-const curvePoints = curves.map(d => d.getPoints(20));
+const curveMat = new THREE.LineBasicMaterial({color: 0xDD5533, linewidth: 4})
+const curvePoints = curves.map((d) => d.getPoints(20))
 const curveGeoms = curvePoints.map(d =>
   new THREE.BufferGeometry().setFromPoints(d)
-);
-const curveObjs = curveGeoms.map(d => new THREE.Line(d, curveMat.clone()));
+)
+const curveObjs = curveGeoms.map((d) => new THREE.Line(d, curveMat.clone()))
+curveObjs[0].name = 'Well A'
+curveObjs[1].name = 'Well B'
+curveObjs[2].name = 'Well C'
 
-const raycaster = new THREE.Raycaster();
-raycaster.linePrecision = 0.1;
-const mouse = new THREE.Vector2();
+const raycaster = new THREE.Raycaster()
+raycaster.linePrecision = 100
+const mouse = new THREE.Vector2()
 
 function onMouseMove(ev) {
-  mouse.x = (ev.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+  mouse.x = (ev.clientX / window.innerWidth) * 2 - 1
+  mouse.y = -(ev.clientY / window.innerHeight) * 2 + 1
 }
 
 curveObjs.map(d => scene.add(d));
 scene.add(mesh);
 cam.position.z = 5000;
-cam.position.y = 1000;
+cam.position.y = 5000;
+cam.position.x = 8000
 
-// mesh.position.x = -(GRID_SIZE - 1) / 2;
-// mesh.position.z = (GRID_SIZE - 1) / 2;
+curveObjs.map((d) => scene.add(d))
+console.log(scene)
+scene.add(mesh)
 
 let controls = new THREE.OrbitControls(cam);
 controls.update();
 
-let cnt = 0;
-let intersects;
-let active;
-
-function tick() {
-  raycaster.setFromCamera(mouse, cam);
-  if (cnt++ % 60 == 0) {
-    console.log(active);
-  }
-  intersects = raycaster.intersectObjects(scene.children);
-  if (intersects.length) {
-    if (active != intersects[0].object) {
-      if (active) active.material.color.set(active.currentColor);
-      active = intersects[0].object;
-      active.currentColor = active.material.color.getHex();
-      active.material.color.set(0x00cc22);
-    }
+function onClick() {
+  if (intersects.length && active != intersects[0].object) {
+    if (active) active.material.color.set(active.currentColor)
+    active = intersects[0].object
+    active.currentColor = active.material.color.getHex()
+    active.material.color.set(0x00CC22)
+    displayTooltip(active)
   } else {
-    if (active) active.material.color.set(active.currentColor);
-    active = undefined;
+    if (active) active.material.color.set(active.currentColor)
+    active = undefined
+    hideTooltip()
   }
-
-  requestAnimationFrame(tick);
-  controls.update();
-  renderer.render(scene, cam);
 }
 
-window.addEventListener("mousemove", onMouseMove, false);
-tick();
+function displayTooltip(target) {
+  sceneHud.add(tooltipLine)
+  sceneHud.add(obj)
+  textEl.style.display = 'initial'
+  textEl.innerHTML = target.name
+}
+
+function hideTooltip() {
+  sceneHud.remove(tooltipLine)
+  sceneHud.remove(obj)
+  textEl.style.display = 'none'
+}
 
 function generateHeight(width, height) {
   var size = width * height,
@@ -199,3 +189,49 @@ function generateHeight(width, height) {
   }
   return data;
 }
+
+hideTooltip()
+renderer.autoClear = false
+
+let cnt = 0;
+let intersects;
+let active;
+let pos
+let vec = new THREE.Vector3()
+
+function tick() {
+  raycaster.setFromCamera(mouse, cam);
+  if (active) {
+    pos = w2s(active.position, cam, RESOLUTION)
+    obj.position.x = pos.x - RESOLUTION.x / 2
+    obj.position.y = pos.y + RESOLUTION.y / 2
+
+    // Fixes weird WebGL/OpenGL behavior, when the entire geometry doesn't get displayed
+    // Probably, due to large values at verticies (either frustumming, camera optimization, etc)
+    vec.x = Math.max(-RESOLUTION.x / 2, Math.min(obj.position.x, RESOLUTION.x / 2))
+    vec.y = Math.max(-RESOLUTION.y / 2, Math.min(obj.position.y, RESOLUTION.y / 2))
+    tooltipLine.geometry.vertices[0].x = vec.x
+    tooltipLine.geometry.vertices[0].y = vec.y
+    tooltipLine.geometry.vertices[1].x = vec.x + 100
+    tooltipLine.geometry.vertices[1].y = vec.y + 100
+    tooltipLine.geometry.vertices[2].x = vec.x + 150
+    tooltipLine.geometry.vertices[2].y = vec.y + 100
+    tooltipLine.geometry.verticesNeedUpdate = true
+    textEl.style.left = obj.position.x + 103 + RESOLUTION.x / 2 + 'px'
+    textEl.style.top  = -obj.position.y - 123 + RESOLUTION.y / 2 + 'px'
+  }
+  if (cnt++ % 60 == 0) {
+    //console.log(tooltipLine.geometry.vertices[0])
+  }
+  intersects = raycaster.intersectObjects(scene.children);
+
+  requestAnimationFrame(tick);
+  controls.update();
+  renderer.clear()
+  renderer.render(scene, cam)
+  renderer.render(sceneHud, camHud)
+}
+
+window.addEventListener("mousemove", onMouseMove, false);
+window.addEventListener('click', onClick, false)
+tick();
