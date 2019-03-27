@@ -9,6 +9,7 @@
     </style>
   </head>
   <body>
+    <span class="googleCopyright">Map data ©2018 Google</span>
     <style>
       .label {
         position: absolute;
@@ -18,9 +19,17 @@
         color: white;
         text-shadow: 0 0 2px black;
       }
+      span.googleCopyright {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        background: white;
+        font-family: "Arial";
+        font-size: 12px;
+      }
     </style>
     <div id="text" class="label">TEXT</overlay>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/102/three.min.js"></script>
+    <script src="three.min.js"></script>
     <script src="ThreeOrbitControl.js"></script>
     <script src="ImprovedNoise.js"></script>
     <script src="BufferGeometryUtils.js"></script>
